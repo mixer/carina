@@ -35,7 +35,6 @@ export class Carina {
     public socket;
 
     private waiting: { [key: string]: Promise<any> } = {};
-
     private subscriptions: string[] = [];
 
     constructor(options: SocketOptions = {}) {
@@ -68,11 +67,8 @@ export class Carina {
 
         return this
         .waitFor(`subscription:${slug}`, () => {
-            return this.socket.execute('livesubscribe', { events: [slug] });
-        })
-        .then(res => {
             this.subscriptions.push(slug);
-            return Carina.Promise.resolve(res);
+            return this.socket.execute('livesubscribe', { events: [slug] });
         })
         .catch(err => {
             this.stopWaiting(`subscription:${slug}`);
@@ -90,12 +86,11 @@ export class Carina {
         this.stopWaiting(`subscription:${slug}`);
         return this.socket.execute('liveunsubscribe', { events: [slug] })
         .then(res => {
-            this.subscriptions.forEach((subscription, index) => {
-                if (subscription === slug) {
-                    this.subscriptions.splice(index, 1);
-                }
-            });
-            return Carina.Promise.resolve(res);
+            const index = this.subscriptions.indexOf(slug);
+            if (index > -1) {
+                this.subscriptions.splice(index, 1);
+            }
+            return res;
         });
     }
 

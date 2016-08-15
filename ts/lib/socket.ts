@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import { TimeoutError, MessageParseError, ConstellationError } from './errors';
 import * as pako from 'pako';
+import { ReconnectionPolicy } from "./reconnection";
 
 export class ConstellationSocket extends EventEmitter {
     public static WebSocket: any = typeof WebSocket === 'undefined' ? null : WebSocket;
@@ -18,8 +19,10 @@ export class ConstellationSocket extends EventEmitter {
     };
 
     public ready = false;
-    public reconnecting: boolean = false;
     public options: SocketOptions = Object.assign({}, ConstellationSocket.DEFAULTS);
+    public forceClose: boolean = false;
+    public reconnecting: boolean = false;
+    private reconnectionPolicy: ReconnectionPolicy = new ReconnectionPolicy();
 
     private socket: WebSocket;
     private messageId: number = 0;
@@ -80,20 +83,26 @@ export class ConstellationSocket extends EventEmitter {
             this.ready = true;
             if (this.reconnecting) {
                 this.reconnecting = false;
+                this.reconnectionPolicy.reset();
                 this.emit("reopen");
             }
             this.queue.forEach(data => this.send(data));
             this.queue = [];
         });
         this.on("close", () => {
-            if (!this.options.autoReconnect) {
+            if (!this.options.autoReconnect || this.forceClose) {
                 return;
             }
             this.reconnecting = true;
             setTimeout(() => {
                 this.connect();
-            }, 10000);
+            }, this.reconnectionPolicy.next());
         });
+    }
+
+    public close() {
+        this.forceClose = true;
+        this.socket.close();
     }
 
     /**
@@ -107,7 +116,7 @@ export class ConstellationSocket extends EventEmitter {
 
         return new ConstellationSocket.Promise((resolve, reject) => {
             let replyListener;
-            let timeout: NodeJS.Timer = setTimeout(() => {
+            let timeout = setTimeout(() => {
                 this.removeListener(`reply:${id}`, replyListener);
                 reject(
                     new TimeoutError(
