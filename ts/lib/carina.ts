@@ -70,7 +70,10 @@ export class Carina {
         .waitFor(`subscription:${slug}`, () => {
             return this.socket.execute('livesubscribe', { events: [slug] });
         })
-        .then(() => this.subscriptions.push(slug))
+        .then(res => {
+            this.subscriptions.push(slug);
+            return Carina.Promise.resolve(res);
+        })
         .catch(err => {
             this.stopWaiting(`subscription:${slug}`);
             throw err;
