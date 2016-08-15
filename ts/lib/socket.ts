@@ -14,9 +14,11 @@ export class ConstellationSocket extends EventEmitter {
         replyTimeout: 10000, // 10 seconds
         isBot: false,
         autoConnect: true,
+        autoReconnect: true,
     };
 
     public ready = false;
+    public reconnecting: boolean = false;
     public options: SocketOptions = Object.assign({}, ConstellationSocket.DEFAULTS);
 
     private socket: WebSocket;
@@ -76,8 +78,21 @@ export class ConstellationSocket extends EventEmitter {
 
         this.once('event:hello', () => {
             this.ready = true;
+            if (this.reconnecting) {
+                this.reconnecting = false;
+                this.emit("reopen");
+            }
             this.queue.forEach(data => this.send(data));
             this.queue = [];
+        });
+        this.on("close", () => {
+            if (!this.options.autoReconnect) {
+                return;
+            }
+            this.reconnecting = true;
+            setTimeout(() => {
+                this.connect();
+            }, 10000);
         });
     }
 
@@ -92,7 +107,7 @@ export class ConstellationSocket extends EventEmitter {
 
         return new ConstellationSocket.Promise((resolve, reject) => {
             let replyListener;
-            let timeout = setTimeout(() => {
+            let timeout: NodeJS.Timer = setTimeout(() => {
                 this.removeListener(`reply:${id}`, replyListener);
                 reject(
                     new TimeoutError(
@@ -185,6 +200,7 @@ export type ConstellationMethod = 'livesubscribe' | 'liveunsubscribe';
 export interface SocketOptions {
     isBot?: boolean;
     autoConnect?: boolean;
+    autoReconnect?: boolean;
     gzip?: boolean;
 
     url?: string;
