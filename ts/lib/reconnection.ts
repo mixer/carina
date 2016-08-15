@@ -1,6 +1,6 @@
 export class ReconnectionPolicy {
   private retries: number = 0;
-  private retryWrap = 7;
+  private retryWrap: number = 7;
 
   /**
    * Provide the next reconnect delay, in ms.

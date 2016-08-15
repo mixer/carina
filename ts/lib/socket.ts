@@ -6,6 +6,7 @@ import { ReconnectionPolicy } from "./reconnection";
 export class ConstellationSocket extends EventEmitter {
     public static WebSocket: any = typeof WebSocket === 'undefined' ? null : WebSocket;
     public static Promise: typeof Promise = typeof Promise === 'undefined' ? null : Promise;
+    public static ReconnectionPolicy: typeof ReconnectionPolicy = typeof ReconnectionPolicy === "undefined" ? null : ReconnectionPolicy;
 
     public static IS_BOT_HEADER = 'x-is-bot';
     public static GZIP_THRESHOLD = 1024;
@@ -22,7 +23,7 @@ export class ConstellationSocket extends EventEmitter {
     public options: SocketOptions = Object.assign({}, ConstellationSocket.DEFAULTS);
     public forceClose: boolean = false;
     public reconnecting: boolean = false;
-    private reconnectionPolicy: ReconnectionPolicy = new ReconnectionPolicy();
+    private reconnectionPolicy: ReconnectionPolicy = new ConstellationSocket.ReconnectionPolicy();
 
     private socket: WebSocket;
     private messageId: number = 0;
