@@ -6,7 +6,6 @@ import { ReconnectionPolicy } from "./reconnection";
 export class ConstellationSocket extends EventEmitter {
     public static WebSocket: any = typeof WebSocket === 'undefined' ? null : WebSocket;
     public static Promise: typeof Promise = typeof Promise === 'undefined' ? null : Promise;
-    public static ReconnectionPolicy: typeof ReconnectionPolicy = typeof ReconnectionPolicy === "undefined" ? null : ReconnectionPolicy;
 
     public static IS_BOT_HEADER = 'x-is-bot';
     public static GZIP_THRESHOLD = 1024;
@@ -17,13 +16,13 @@ export class ConstellationSocket extends EventEmitter {
         isBot: false,
         autoConnect: true,
         autoReconnect: true,
+        reconnectionPolicy: new ReconnectionPolicy(),
     };
 
     public ready = false;
     public options: SocketOptions = Object.assign({}, ConstellationSocket.DEFAULTS);
     public forceClose: boolean = false;
     public reconnecting: boolean = false;
-    private reconnectionPolicy: ReconnectionPolicy = new ConstellationSocket.ReconnectionPolicy();
 
     private socket: WebSocket;
     private messageId: number = 0;
@@ -84,7 +83,7 @@ export class ConstellationSocket extends EventEmitter {
             this.ready = true;
             if (this.reconnecting) {
                 this.reconnecting = false;
-                this.reconnectionPolicy.reset();
+                this.options.reconnectionPolicy.reset();
                 this.emit("reopen");
             }
             this.queue.forEach(data => this.send(data));
@@ -97,7 +96,7 @@ export class ConstellationSocket extends EventEmitter {
             this.reconnecting = true;
             setTimeout(() => {
                 this.connect();
-            }, this.reconnectionPolicy.next());
+            }, this.options.reconnectionPolicy.next());
         });
     }
 
@@ -210,8 +209,10 @@ export type ConstellationMethod = 'livesubscribe' | 'liveunsubscribe';
 export interface SocketOptions {
     isBot?: boolean;
     autoConnect?: boolean;
-    autoReconnect?: boolean;
     gzip?: boolean;
+
+    autoReconnect?: boolean;
+    reconnectionPolicy?: ReconnectionPolicy;
 
     url?: string;
     protocol?: string;

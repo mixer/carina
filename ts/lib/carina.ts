@@ -32,24 +32,6 @@ export class Carina {
         return ConstellationSocket.Promise;
     }
 
-    /**
-     * Set the Reconnection policy implementation.
-     * You can set this if you want to manage the backoff for the socket reconnection's.
-     *
-     * You can see an example in the lib folder called "reconnection".
-     * Note: The interface must have the methods shown in the example.
-     *
-     * @example
-     * Carina.ReconnectionPolicy = require('../myreconnctionpolicy');
-     */
-    public static set ReconnectionPolicy(promise: any) {
-        ConstellationSocket.ReconnectionPolicy = promise;
-    }
-
-    public static get ReconnectionPolicy() {
-        return ConstellationSocket.ReconnectionPolicy;
-    }
-
     public socket;
 
     private waiting: { [key: string]: Promise<any> } = {};
