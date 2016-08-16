@@ -41,7 +41,7 @@ export class Carina {
         this.socket = new ConstellationSocket(options);
 
         // Resub to live events on reconnect.
-        this.socket.on("reopen", () => {
+        this.socket.on('reopen', () => {
             this.socket.execute('livesubscribe', { events: this.subscriptions });
         });
     }

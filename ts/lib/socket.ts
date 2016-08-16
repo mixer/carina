@@ -1,7 +1,7 @@
+import * as pako from 'pako';
 import { EventEmitter } from 'events';
 import { TimeoutError, MessageParseError, ConstellationError } from './errors';
-import * as pako from 'pako';
-import { ReconnectionPolicy } from "./reconnection";
+import { ReconnectionPolicy } from './reconnection';
 
 export class ConstellationSocket extends EventEmitter {
     public static WebSocket: any = typeof WebSocket === 'undefined' ? null : WebSocket;
@@ -79,20 +79,21 @@ export class ConstellationSocket extends EventEmitter {
         this.rebroadcastEvent('message');
         this.rebroadcastEvent('error');
 
-        this.once('event:hello', () => {
+        this.on('event:hello', () => {
             this.ready = true;
             if (this.reconnecting) {
                 this.reconnecting = false;
                 this.options.reconnectionPolicy.reset();
-                this.emit("reopen");
+                this.emit('reopen');
             }
             this.queue.forEach(data => this.send(data));
             this.queue = [];
         });
-        this.on("close", () => {
+        this.on('close', () => {
             if (!this.options.autoReconnect || this.forceClose) {
                 return;
             }
+            this.ready = false;
             this.reconnecting = true;
             setTimeout(() => {
                 this.connect();
@@ -125,7 +126,7 @@ export class ConstellationSocket extends EventEmitter {
                 );
             }, this.options.replyTimeout);
 
-            this.once(`reply:${id}`, replyListener = (err, res) => {
+            this.on(`reply:${id}`, replyListener = (err, res) => {
                 clearTimeout(timeout);
 
                 if (err) {
