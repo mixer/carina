@@ -90,10 +90,10 @@ export class ConstellationSocket extends EventEmitter {
             this.queue = [];
         });
         this.on('close', () => {
+            this.ready = false;
             if (!this.options.autoReconnect || this.forceClose) {
                 return;
             }
-            this.ready = false;
             this.reconnecting = true;
             setTimeout(() => {
                 this.connect();
