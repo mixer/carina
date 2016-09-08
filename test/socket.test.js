@@ -13,7 +13,7 @@ describe('socket', () => {
     });
 
     afterEach(done => {
-        if (socket) {
+        if (socket && socket.socket) {
             socket.close();
             socket = null;
         }
@@ -22,6 +22,21 @@ describe('socket', () => {
     });
 
     describe('connecting', () => {
+        it('does not automatically connect', done => {
+            socket = new Socket({ url });
+            expect(socket.socket).to.be.undefined;
+            done();
+        });
+
+        it('connects automatically with option', done => {
+            socket = new Socket({ url, autoConnect: true });
+            server.on('connection', ws => {
+                expect(ws.upgradeReq.url).to.equal('/');
+                expect(ws.upgradeReq.headers.authorization).to.be.undefined;
+                done();
+            });
+        });
+
         it('connects with no auth', done => {
             socket = new Socket({ url }).connect();
             server.on('connection', ws => {

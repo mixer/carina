@@ -46,6 +46,9 @@ export interface SocketOptions {
     // User agent header to advertise in connections.
     userAgent?: string;
 
+    // Optional setting to the make the socket connection on new instance.
+    autoConnect?: boolean;
+
     // Settings to use for reconnecting automatically to Constellation.
     // Defaults to automatically reconnecting with the ExponentialPolicy.
     reconnectionPolicy?: ReconnectionPolicy;
@@ -91,6 +94,7 @@ function getDefaults(): SocketOptions {
         replyTimeout: 10000,
         isBot: false,
         gzip: new SizeThresholdGzipDetector(1024),
+        autoConnect: false,
         autoReconnect: true,
         reconnectionPolicy: new ExponentialReconnectionPolicy(),
         pingInterval: 10 * 1000,
@@ -123,6 +127,10 @@ export class ConstellationSocket extends EventEmitter {
 
         this.options = Object.assign(getDefaults(), options);
         this.on('message', msg => this.extractMessage(msg.data));
+
+        if (options.autoConnect) {
+            this.connect();
+        }
     }
 
     /**
