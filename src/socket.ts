@@ -112,17 +112,49 @@ export class ConstellationSocket extends EventEmitter {
     constructor(options: SocketOptions = {}) {
         super();
         this.setMaxListeners(Infinity);
+        this.setOptions(options);
 
-        if (options.jwt && options.authToken) {
-            throw new Error('Cannot connect to Constellation with both JWT and OAuth token.');
-        }
         if (ConstellationSocket.WebSocket === undefined) {
             throw new Error('Cannot find a websocket implementation; please provide one by ' +
                 'running ConstellationSocket.WebSocket = myWebSocketModule;')
         }
 
-        this.options = Object.assign(getDefaults(), options);
         this.on('message', msg => this.extractMessage(msg.data));
+        this.once('open', () => this.schedulePing());
+
+        this.once('event:hello', () => {
+            if (this.state !== State.Connecting) { // may have been closed just now
+                return;
+            }
+
+            this.options.reconnectionPolicy.reset();
+            this.state = State.Connected;
+            this.queue.forEach(data => this.send(data));
+        });
+
+        this.once('close', err => {
+            if (this.state === State.Closing || !this.options.autoReconnect) {
+                this.state = State.Idle;
+                return;
+            }
+
+            this.state = State.Connecting;
+            this.reconnectTimeout = setTimeout(() => {
+                this.connect();
+            }, this.options.reconnectionPolicy.next());
+        });
+    }
+
+    /**
+     * Set the given options.
+     * Defaults and previous option values will be used if not supplied.
+     */
+    setOptions(options: SocketOptions) {
+        this.options = Object.assign({}, this.options || getDefaults(), options);
+
+        if (this.options.jwt && this.options.authToken) {
+            throw new Error('Cannot connect to Constellation with both JWT and OAuth token.');
+        }
     }
 
     /**
@@ -161,30 +193,6 @@ export class ConstellationSocket extends EventEmitter {
             }
         });
 
-        this.once('open', () => this.schedulePing());
-
-        this.once('event:hello', () => {
-            if (this.state !== State.Connecting) { // may have been closed just now
-                return;
-            }
-
-            this.options.reconnectionPolicy.reset();
-            this.state = State.Connected;
-            this.queue.forEach(data => this.send(data));
-        });
-
-        this.once('close', err => {
-            if (this.state === State.Closing || !this.options.autoReconnect) {
-                this.state = State.Idle;
-                return;
-            }
-
-            this.state = State.Connecting;
-            this.reconnectTimeout = setTimeout(() => {
-                this.connect();
-            }, this.options.reconnectionPolicy.next());
-        });
-
         return this;
     }
 
@@ -202,6 +210,7 @@ export class ConstellationSocket extends EventEmitter {
     public close() {
         this.state = State.Closing;
         this.socket.close();
+        this.socket = null;
         clearTimeout(this.reconnectTimeout);
 
         this.queue.forEach(packet => packet.cancel());
@@ -319,7 +328,13 @@ export class ConstellationSocket extends EventEmitter {
     }
 
     private rebroadcastEvent(name: string) {
-        this.socket.addEventListener(name, evt => this.emit(name, evt));
+        const socket = this.socket;
+        socket.addEventListener(name, evt => {
+            // Sanity check that the socket is current.
+            if (this.socket === socket) {
+                this.emit(name, evt);
+            }
+        });
     }
 
     private schedulePing() {
