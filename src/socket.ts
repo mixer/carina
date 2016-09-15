@@ -210,7 +210,6 @@ export class ConstellationSocket extends EventEmitter {
     public close() {
         this.state = State.Closing;
         this.socket.close();
-        this.socket = null;
         clearTimeout(this.reconnectTimeout);
 
         this.queue.forEach(packet => packet.cancel());
