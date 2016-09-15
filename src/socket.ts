@@ -82,6 +82,8 @@ export enum State {
     Connected,
     // the socket is gracefully closing; after this it will become Idle
     Closing,
+    // the socket is attempting to reconnect
+    Reconnecting,
 }
 
 function getDefaults(): SocketOptions {
@@ -123,7 +125,8 @@ export class ConstellationSocket extends EventEmitter {
         this.on('open', () => this.schedulePing());
 
         this.on('event:hello', () => {
-            if (this.state !== State.Connecting) { // may have been closed just now
+            // may have been closed just now
+            if (this.state !== State.Connecting && this.state !== State.Reconnecting) {
                 return;
             }
 
@@ -133,12 +136,16 @@ export class ConstellationSocket extends EventEmitter {
         });
 
         this.on('close', err => {
+            if (this.state === State.Reconnecting) {
+                return;
+            }
+
             if (this.state === State.Closing || !this.options.autoReconnect) {
                 this.state = State.Idle;
                 return;
             }
 
-            this.state = State.Connecting;
+            this.state = State.Reconnecting;
             this.reconnectTimeout = setTimeout(() => {
                 this.connect();
             }, this.options.reconnectionPolicy.next());
@@ -179,7 +186,12 @@ export class ConstellationSocket extends EventEmitter {
 
         this.socket = new ConstellationSocket.WebSocket(url, protocol, extras);
         this.socket.binaryType = 'arraybuffer';
-        this.state = State.Connecting;
+
+        if (this.state === State.Closing) {
+            this.state = State.Reconnecting;
+        } else {
+            this.state = State.Connecting;
+        }
 
         this.rebroadcastEvent('open');
         this.rebroadcastEvent('close');
@@ -327,13 +339,7 @@ export class ConstellationSocket extends EventEmitter {
     }
 
     private rebroadcastEvent(name: string) {
-        const socket = this.socket;
-        socket.addEventListener(name, evt => {
-            // Sanity check that the socket is current.
-            if (this.socket === socket) {
-                this.emit(name, evt);
-            }
-        });
+        this.socket.addEventListener(name, evt => this.emit(name, evt));
     }
 
     private schedulePing() {
