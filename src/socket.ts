@@ -82,8 +82,10 @@ export enum State {
     Connected,
     // the socket is gracefully closing; after this it will become Idle
     Closing,
-    // the socket is attempting to reconnect
+    // the socket is reconnecting after closing unexpectedly
     Reconnecting,
+    // connect was called whilst the old socket was still open
+    Refreshing,
 }
 
 function getDefaults(): SocketOptions {
@@ -125,18 +127,15 @@ export class ConstellationSocket extends EventEmitter {
         this.on('open', () => this.schedulePing());
 
         this.on('event:hello', () => {
-            // may have been closed just now
-            if (this.state !== State.Connecting && this.state !== State.Reconnecting) {
-                return;
-            }
-
             this.options.reconnectionPolicy.reset();
             this.state = State.Connected;
             this.queue.forEach(data => this.send(data));
         });
 
         this.on('close', err => {
-            if (this.state === State.Reconnecting) {
+            if (this.state === State.Refreshing) {
+                this.state = State.Idle;
+                this.connect();
                 return;
             }
 
@@ -169,6 +168,11 @@ export class ConstellationSocket extends EventEmitter {
      * connect when creating a new instance.
      */
     public connect(): ConstellationSocket {
+        if (this.state === State.Closing) {
+            this.state = State.Refreshing;
+            return;
+        }
+
         const protocol = this.options.gzip ? 'cnstl-gzip' : 'cnstl';
         const extras = {
             headers: {
@@ -187,11 +191,7 @@ export class ConstellationSocket extends EventEmitter {
         this.socket = new ConstellationSocket.WebSocket(url, protocol, extras);
         this.socket.binaryType = 'arraybuffer';
 
-        if (this.state === State.Closing) {
-            this.state = State.Reconnecting;
-        } else {
-            this.state = State.Connecting;
-        }
+        this.state = State.Connecting;
 
         this.rebroadcastEvent('open');
         this.rebroadcastEvent('close');
@@ -220,9 +220,13 @@ export class ConstellationSocket extends EventEmitter {
      * Close gracefully shuts down the websocket.
      */
     public close() {
+        if (this.state === State.Reconnecting) {
+            clearTimeout(this.reconnectTimeout);
+            return;
+        }
+
         this.state = State.Closing;
         this.socket.close();
-        clearTimeout(this.reconnectTimeout);
 
         this.queue.forEach(packet => packet.cancel());
         this.queue.clear();
