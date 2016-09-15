@@ -222,6 +222,7 @@ export class ConstellationSocket extends EventEmitter {
     public close() {
         if (this.state === State.Reconnecting) {
             clearTimeout(this.reconnectTimeout);
+            this.state = State.Idle;
             return;
         }
 
