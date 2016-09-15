@@ -120,9 +120,9 @@ export class ConstellationSocket extends EventEmitter {
         }
 
         this.on('message', msg => this.extractMessage(msg.data));
-        this.once('open', () => this.schedulePing());
+        this.on('open', () => this.schedulePing());
 
-        this.once('event:hello', () => {
+        this.on('event:hello', () => {
             if (this.state !== State.Connecting) { // may have been closed just now
                 return;
             }
@@ -132,7 +132,7 @@ export class ConstellationSocket extends EventEmitter {
             this.queue.forEach(data => this.send(data));
         });
 
-        this.once('close', err => {
+        this.on('close', err => {
             if (this.state === State.Closing || !this.options.autoReconnect) {
                 this.state = State.Idle;
                 return;
