@@ -1,4 +1,4 @@
-import { EventEmitter } from 'events';
+import { EventEmitter } from './events';
 
 export enum PacketState {
     // The packet has not been sent yet, it may be queued for later sending

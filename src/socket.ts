@@ -1,10 +1,9 @@
 import { TimeoutError, MessageParseError, ConstellationError, CancelledError } from './errors';
 import { ExponentialReconnectionPolicy, ReconnectionPolicy } from './reconnection';
-import { EventEmitter } from 'events';
+import { EventEmitter } from './events';
 import { Packet, PacketState } from './packets';
 
 import { timeout, resolveOn } from './util';
-import * as querystring from 'querystring';
 import * as pako from 'pako';
 
 const pkg = require('../package.json');
@@ -115,7 +114,6 @@ export class ConstellationSocket extends EventEmitter {
 
     constructor(options: SocketOptions = {}) {
         super();
-        this.setMaxListeners(Infinity);
         this.setOptions(options);
 
         if (ConstellationSocket.WebSocket === undefined) {
@@ -123,7 +121,7 @@ export class ConstellationSocket extends EventEmitter {
                 'running ConstellationSocket.WebSocket = myWebSocketModule;')
         }
 
-        this.on('message', msg => this.extractMessage(msg.data));
+        this.on<{ data: string }>('message', msg => this.extractMessage(msg.data));
         this.on('open', () => this.schedulePing());
 
         this.on('event:hello', () => {
@@ -185,7 +183,7 @@ export class ConstellationSocket extends EventEmitter {
         if (this.options.authToken) {
             extras.headers['Authorization'] = `Bearer ${this.options.authToken}`;
         } else if (this.options.jwt) {
-            url += '?' + querystring.stringify({ jwt: this.options.jwt });
+            url += `?jwt=${this.options.jwt}`; // invalid JWTs will cause errors
         }
 
         this.socket = new ConstellationSocket.WebSocket(url, protocol, extras);
