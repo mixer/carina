@@ -7,8 +7,6 @@ export class EventEmitter {
         let list = this.listeners[eventName];
         if (!list) {
              this.listeners[eventName] = list = [];
-        } else if (list.indexOf(listener) !== -1) {
-            return this;
         }
         list.push(listener);
         return this;
@@ -28,20 +26,29 @@ export class EventEmitter {
     }
 
     public once<T>(eventName: string, listener: Listener<T>) {
-        return this.on<T>(eventName, data => {
+        let list = this.listeners[eventName];
+        if (!list) {
+             this.listeners[eventName] = list = [];
+        }
+        list.push(data => {
             this.removeListener(eventName, listener);
             listener(data);
         });
+        return this;
     }
 
     public emit<T>(eventName: string, data?: T) {
         const list = this.listeners[eventName];
         if (!list) {
+            if (eventName === 'error') {
+                throw data;
+            }
             return;
         }
+        console.log('emitting even', eventName, this.listeners[eventName]);
         const cpy = [...list];
         for (let i = 0; i < cpy.length; ++i) {
-            cpy[i](data);
+            cpy[i].call(this, data);
         }
     }
 }
