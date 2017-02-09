@@ -100,6 +100,8 @@ function getDefaults(): SocketOptions {
     };
 }
 
+const jwtValidator = /^[\w_-]+?\.[\w_-]+?\.([\w_-]+)?$/i;
+
 export class ConstellationSocket extends EventEmitter {
     // WebSocket constructor, may be overridden if the environment
     // does not natively support it.
@@ -155,6 +157,10 @@ export class ConstellationSocket extends EventEmitter {
      */
     setOptions(options: SocketOptions) {
         this.options = Object.assign({}, this.options || getDefaults(), options);
+
+        if (this.options.jwt && !jwtValidator.test(this.options.jwt)) {
+            throw new Error('Invalid jwt');
+        }
 
         if (this.options.jwt && this.options.authToken) {
             throw new Error('Cannot connect to Constellation with both JWT and OAuth token.');

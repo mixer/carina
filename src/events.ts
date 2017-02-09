@@ -1,8 +1,12 @@
 
 export type Listener<T> = (data?: T) => void;
+interface IWrappedListener<T> {
+    (data?: T): void;
+    listener: (data?: T) => void;
+}
 
 export class EventEmitter {
-    private listeners: { [event: string]: Listener<any>[] } = {};
+    private listeners: { [event: string]: (Listener<any> | IWrappedListener<any>)[] } = {};
     public on <T>(eventName: string, listener: Listener<T>): this {
         let list = this.listeners[eventName];
         if (!list) {
@@ -17,7 +21,14 @@ export class EventEmitter {
         if (!list) {
             return this;
         }
-        const idx = list.indexOf(listener);
+        let idx = -1;
+        for (let i = 0; i < list.length; ++i) {
+            const _listener = <IWrappedListener<T>>list[i];
+            if (_listener === listener || _listener.listener === listener) {
+                idx = i;
+                break;
+            }
+        }
         if (idx === -1) {
             return this;
         }
@@ -30,10 +41,12 @@ export class EventEmitter {
         if (!list) {
              this.listeners[eventName] = list = [];
         }
-        list.push(data => {
-            this.removeListener(eventName, listener);
+        const wrappedFn = <IWrappedListener<T>>(data => {
+            this.removeListener(eventName, wrappedFn);
             listener(data);
         });
+        wrappedFn.listener = listener;
+        list.push(wrappedFn);
         return this;
     }
 
@@ -43,12 +56,12 @@ export class EventEmitter {
             if (eventName === 'error') {
                 throw data;
             }
-            return;
+            return false;
         }
-        console.log('emitting even', eventName, this.listeners[eventName]);
         const cpy = [...list];
         for (let i = 0; i < cpy.length; ++i) {
             cpy[i].call(this, data);
         }
+        return true;
     }
 }
