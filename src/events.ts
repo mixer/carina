@@ -16,6 +16,10 @@ export class EventEmitter {
         return this;
     }
 
+    public addListener<T>(eventName: string, listener: Listener<T>) {
+        return this.on(eventName, listener);
+    }
+
     public removeListener<T>(eventName: string, listener: Listener<T>) {
         const list = this.listeners[eventName];
         if (!list) {
