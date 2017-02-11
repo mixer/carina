@@ -1,9 +1,9 @@
-import { TimeoutError, MessageParseError, ConstellationError, CancelledError } from './errors';
+import { MessageParseError, ConstellationError, CancelledError } from './errors';
 import { ExponentialReconnectionPolicy, ReconnectionPolicy } from './reconnection';
 import { EventEmitter } from './events';
 import { Packet, PacketState } from './packets';
 
-import { timeout, resolveOn } from './util';
+import { resolveOn } from './util';
 import * as pako from 'pako';
 
 const pkg = require('../package.json');
@@ -19,7 +19,7 @@ export interface GzipDetector {
      * @param {string} packet `raw` encoded as a string
      * @param {any}    raw    the JSON-serializable object to be sent
      */
-    shouldZip(packet: string, raw: any);
+    shouldZip(packet: string, raw: any): boolean;
 }
 
 /**
@@ -29,7 +29,7 @@ export interface GzipDetector {
 export class SizeThresholdGzipDetector implements GzipDetector {
     constructor(private threshold: number) {}
 
-    shouldZip(packet: string, raw: { [key: string]: any }) {
+    shouldZip(packet: string): boolean {
         return packet.length > this.threshold;
     }
 }
@@ -107,8 +107,8 @@ export class ConstellationSocket extends EventEmitter {
     // does not natively support it.
     public static WebSocket: any = typeof WebSocket === 'undefined' ? null : WebSocket;
 
-    private reconnectTimeout: NodeJS.Timer;
-    private pingTimeout: NodeJS.Timer;
+    private reconnectTimeout: NodeJS.Timer | number;
+    private pingTimeout: NodeJS.Timer | number;
     private options: SocketOptions;
     private state: State;
     private socket: WebSocket;
@@ -132,7 +132,7 @@ export class ConstellationSocket extends EventEmitter {
             this.queue.forEach(data => this.send(data));
         });
 
-        this.on('close', err => {
+        this.on('close', _err => {
             if (this.state === State.Refreshing) {
                 this.state = State.Idle;
                 this.connect();
@@ -171,15 +171,15 @@ export class ConstellationSocket extends EventEmitter {
      * Open a new socket connection. By default, the socket will auto
      * connect when creating a new instance.
      */
-    public connect(): ConstellationSocket {
+    public connect(): this {
         if (this.state === State.Closing) {
             this.state = State.Refreshing;
-            return;
+            return this;
         }
 
         const protocol = this.options.gzip ? 'cnstl-gzip' : 'cnstl';
         const extras = {
-            headers: {
+            headers: <{ [name: string]: string | boolean }>{
                 'User-Agent': this.options.userAgent,
                 'X-Is-Bot': this.options.isBot,
             },
@@ -226,7 +226,7 @@ export class ConstellationSocket extends EventEmitter {
      */
     public close() {
         if (this.state === State.Reconnecting) {
-            clearTimeout(this.reconnectTimeout);
+            clearTimeout(<number>this.reconnectTimeout);
             this.state = State.Idle;
             return;
         }
@@ -270,8 +270,8 @@ export class ConstellationSocket extends EventEmitter {
         const timeout = packet.getTimeout(this.options.replyTimeout);
         const promise = Promise.race([
             // Wait for replies to that packet ID:
-            resolveOn(this, `reply:${packet.id()}`, timeout)
-            .then((result: { err: Error, result: any }) => {
+            resolveOn<{ err: Error, result: any }>(this, `reply:${packet.id()}`, timeout)
+            .then(result => {
                 this.queue.delete(packet);
 
                 if (result.err) {
@@ -291,7 +291,7 @@ export class ConstellationSocket extends EventEmitter {
             resolveOn(this, 'close', timeout + 1)
             .then(() => {
                 if (!this.queue.has(packet)) { // skip if we already resolved
-                    return;
+                    return undefined;
                 }
 
                 packet.setState(PacketState.Pending);
@@ -353,7 +353,7 @@ export class ConstellationSocket extends EventEmitter {
     }
 
     private schedulePing() {
-        clearTimeout(this.pingTimeout);
+        clearTimeout(<number>this.pingTimeout);
 
         this.pingTimeout = setTimeout(() => {
             if (this.state !== State.Connected) {
@@ -368,12 +368,15 @@ export class ConstellationSocket extends EventEmitter {
                 this.emit('ping');
             });
 
-            return Promise.race([
+            Promise.race([
                 resolveOn(this, `reply:${packet.id()}`, timeout),
                 resolveOn(this, 'close', timeout + 1),
             ])
             .then(() => this.emit('pong'))
-            .catch(err => this.socket.close());
+            .catch(err => {
+                this.socket.close();
+                this.emit('warning', err)
+            });
         }, this.options.pingInterval);
     }
 }

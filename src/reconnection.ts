@@ -11,7 +11,7 @@ export interface ReconnectionPolicy {
   /**
    * Resets an internal counter of reconnection's, should be called on a successful connection.
    */
-  reset()
+  reset(): void
 }
 
 /**

@@ -188,7 +188,7 @@ describe('socket', () => {
             socket.options.replyTimeout = 5;
             greet();
             return socket.execute('hello', { foo: 'bar' })
-            .catch(err => expect(err).to.be.an.instanceof(Errors.TimeoutError));
+            .catch(err => expect(err).to.be.an.instanceof(Errors.EventTimeoutError));
         });
 
         it('retries messages if the socket is closed before replying', () => {
