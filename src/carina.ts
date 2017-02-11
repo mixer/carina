@@ -46,7 +46,7 @@ export class Carina {
     /**
      * Boots the connection to constellation.
      */
-    public open(): Carina {
+    public open(): this {
         this.socket.connect();
         return this;
     }
@@ -70,7 +70,7 @@ export class Carina {
      * @param {onSubscriptionCb} cb - Called each time we receive an event for this slug.
      * @returns {Promise.<>} Resolves once subscribed. Any errors will reject.
      */
-    public subscribe<T>(slug: string, cb: (data: T) => void): Promise<any> {
+    public subscribe<T>(slug: string, cb: (data: T) => void): Promise<void> {
         this.socket.on('event:live', (data: { channel: string, payload: any }) => {
             if (data.channel === slug) {
                 cb(data.payload);
@@ -80,9 +80,8 @@ export class Carina {
         return this
         .waitFor(`subscription:${slug}`, () => {
             return this.socket.execute('livesubscribe', { events: [slug] })
-            .then(res => {
+            .then(() => {
                 this.subscriptions.push(slug);
-                return res;
             });
         })
         .catch(err => {
@@ -97,15 +96,14 @@ export class Carina {
      * @param {string} slug
      * @returns {Promise.<>} Resolves once unsubscribed. Any errors will reject.
      */
-    public unsubscribe(slug: string) {
+    public unsubscribe(slug: string): Promise<void> {
         this.stopWaiting(`subscription:${slug}`);
         return this.socket.execute('liveunsubscribe', { events: [slug] })
-        .then(res => {
+        .then(() => {
             const index = this.subscriptions.indexOf(slug);
             if (index > -1) {
                 this.subscriptions.splice(index, 1);
             }
-            return res;
         });
     }
 
