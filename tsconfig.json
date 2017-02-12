@@ -1,8 +1,6 @@
 {
     "compilerOptions": {
         "declaration": true,
-        "experimentalDecorators": true,
-        "emitDecoratorMetadata": true,
         "moduleResolution": "node",
         "noImplicitAny": true,
         "noImplicitReturns": true,

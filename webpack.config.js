@@ -10,11 +10,10 @@ module.exports = {
         libraryTarget: 'umd',
     },
     resolve: {
-        extensions: ['.webpack.js', '.web.js', '.ts', '.js'],
+        extensions: ['.ts', '.js'],
     },
     module: {
         loaders: [
-            { test: /\.json$/, loaders: ['json-loader'] },
             { test: /\.ts$/, loader: 'awesome-typescript-loader' },
         ]
     },
