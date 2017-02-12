@@ -1,6 +1,6 @@
 import { MessageParseError, ConstellationError, CancelledError } from './errors';
 import { ExponentialReconnectionPolicy, ReconnectionPolicy } from './reconnection';
-import { EventEmitter } from './events';
+import { EventEmitter } from 'events';
 import { Packet, PacketState } from './packets';
 
 import { resolveOn } from './util';
@@ -123,7 +123,7 @@ export class ConstellationSocket extends EventEmitter {
                 'running ConstellationSocket.WebSocket = myWebSocketModule;')
         }
 
-        this.on<{ data: string }>('message', msg => this.extractMessage(msg.data));
+        this.on('message', (msg: { data: string }) => this.extractMessage(msg.data));
         this.on('open', () => this.schedulePing());
 
         this.on('event:hello', () => {
@@ -132,7 +132,7 @@ export class ConstellationSocket extends EventEmitter {
             this.queue.forEach(data => this.send(data));
         });
 
-        this.on('close', _err => {
+        this.on('close', () => {
             if (this.state === State.Refreshing) {
                 this.state = State.Idle;
                 this.connect();
