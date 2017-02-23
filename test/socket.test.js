@@ -32,9 +32,9 @@ describe('socket', () => {
         });
 
         it('connects with JWT auth', done => {
-            socket = new Socket({ url, jwt: 'asdf!' }).connect();
+            socket = new Socket({ url, jwt: 'a.b.c' }).connect();
             server.on('connection', ws => {
-                expect(ws.upgradeReq.url).to.equal('/?jwt=asdf!');
+                expect(ws.upgradeReq.url).to.equal('/?jwt=a.b.c');
                 expect(ws.upgradeReq.headers.authorization).to.be.undefined;
                 done();
             });
@@ -50,7 +50,7 @@ describe('socket', () => {
         });
 
         it('throws an error on ambiguous auth', () => {
-            expect(() => new Socket({ url, authToken: 'asdf!', jwt: 'wat?' }))
+            expect(() => new Socket({ url, authToken: 'asdf!', jwt: 'a.b.c' }))
                 .to.throw(/both JWT and OAuth token/);
         });
     });
@@ -188,7 +188,7 @@ describe('socket', () => {
             socket.options.replyTimeout = 5;
             greet();
             return socket.execute('hello', { foo: 'bar' })
-            .catch(err => expect(err).to.be.an.instanceof(Errors.TimeoutError));
+            .catch(err => expect(err).to.be.an.instanceof(Errors.EventTimeoutError));
         });
 
         it('retries messages if the socket is closed before replying', () => {

@@ -27,7 +27,7 @@ export class Packet extends EventEmitter {
         params: { [key: string]: any }
     };
 
-    constructor(private method: string, private params: { [key: string]: any }) {
+    constructor(method: string, params: { [key: string]: any }) {
         super();
         this.data = {
             id: Math.floor(Math.random() * maxInt32),
