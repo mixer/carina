@@ -6,7 +6,8 @@ import { Packet, PacketState } from './packets';
 import { resolveOn } from './util';
 import * as pako from 'pako';
 
-const pkg = require('../package.json');
+// DO NOT EDIT, THIS IS UPDATE BY THE BUILD SCRIPT
+const packageVersion = '0.6.0'; // package version
 
 /**
  * The GzipDetector is used to determine whether packets should be compressed
@@ -90,7 +91,7 @@ export enum State {
 function getDefaults(): SocketOptions {
     return {
         url: 'wss://constellation.beam.pro',
-        userAgent: `Carina ${pkg.version}`,
+        userAgent: `Carina ${packageVersion}`,
         replyTimeout: 10000,
         isBot: false,
         gzip: new SizeThresholdGzipDetector(1024),

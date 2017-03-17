@@ -1,6 +1,6 @@
 const Websocket = require('ws');
-const Errors = require('../lib/errors');
-const Socket = require('../lib/socket').ConstellationSocket;
+const Carina = require('..');
+const Socket = Carina.ConstellationSocket;
 const port = process.env.SERVER_PORT || 1339;
 
 describe('socket', () => {
@@ -18,7 +18,10 @@ describe('socket', () => {
             socket = null;
         }
 
-        server.close(done);
+        server.close(err => {
+            // delay for freeing up port
+            setTimeout(() => done(err), 15);
+        });
     });
 
     describe('connecting', () => {
@@ -188,7 +191,7 @@ describe('socket', () => {
             socket.options.replyTimeout = 5;
             greet();
             return socket.execute('hello', { foo: 'bar' })
-            .catch(err => expect(err).to.be.an.instanceof(Errors.EventTimeoutError));
+            .catch(err => expect(err).to.be.an.instanceof(Carina.EventTimeoutError));
         });
 
         it('retries messages if the socket is closed before replying', () => {
@@ -211,7 +214,7 @@ describe('socket', () => {
             greet();
 
             return socket.execute('hello', { foo: 'bar' })
-            .catch(err => expect(err).be.an.instanceof(Errors.CancelledError));
+            .catch(err => expect(err).be.an.instanceof(Carina.CancelledError));
         });
 
         describe('pings', () => {
