@@ -1,6 +1,5 @@
 {
     "compilerOptions": {
-        "declaration": true,
         "moduleResolution": "node",
         "noImplicitAny": true,
         "noImplicitReturns": true,
@@ -11,7 +10,7 @@
         "module": "es2015",
         "target": "es5",
         "sourceMap": true,
-        "outDir": "./lib",
+        "outDir": "./dist/module",
         "lib": [
             "dom",
             "es5",

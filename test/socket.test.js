@@ -1,6 +1,7 @@
 const Websocket = require('ws');
-const Errors = require('../lib/errors');
-const Socket = require('../lib/socket').ConstellationSocket;
+const Carina = require('..');
+const Errors = Carina.Errors;
+const Socket = Carina.ConstellationSocket;
 const port = process.env.SERVER_PORT || 1339;
 
 describe('socket', () => {

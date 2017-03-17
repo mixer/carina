@@ -2,13 +2,16 @@
   "name": "carina",
   "version": "0.6.0",
   "description": "A NodeJS and Browser compatible client for Beam.pro's constellation socket.",
-  "main": "lib/index.js",
-  "typings": "lib/index.d.ts",
+  "main": "dist/commonjs",
+  "typings": "dist/module/index.d.ts",
+  "module": "dist/module",
   "scripts": {
-    "build:ts": "rm -rf lib && tsc",
-    "build:webpack": "rm -rf dist && webpack && webpack --config webpack.config.min.js",
-    "build": "npm run build:ts && npm run build:webpack",
-    "test": "npm run build:ts -- --module commonjs && mocha -r test/_setup.js",
+    "build:inline-version": "node version",
+    "build:ts:module": "tsc --declaration",
+    "build:ts:commonjs": "tsc --outDir dist/commonjs --module commonjs",
+    "build:ts": "rm -rf dist && npm run build:inline-version && npm run build:ts:module && npm run build:ts:commonjs",
+    "build": "npm run build:ts",
+    "test": "npm run build:ts:commonjs && mocha -r test/_setup.js",
     "prepublish": "npm run build"
   },
   "repository": {
@@ -26,7 +29,6 @@
   },
   "homepage": "https://github.com/WatchBeam/carina#readme",
   "devDependencies": {
-    "awesome-typescript-loader": "^3.0.3",
     "chai": "^3.5.0",
     "chai-subset": "^1.3.0",
     "mocha": "^3.0.2",
@@ -34,7 +36,6 @@
     "sinon-chai": "^2.8.0",
     "ts-node": "^2.1.0",
     "typescript": "^2.1.6",
-    "webpack": "^2.2.1",
     "ws": "^1.1.1"
   },
   "dependencies": {
