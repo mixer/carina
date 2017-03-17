@@ -19,7 +19,8 @@ describe('socket', () => {
         }
 
         server.close(err => {
-            setTimeout(() => done(err), 10);
+            // delay for freeing up port
+            setTimeout(() => done(err), 15);
         });
     });
 
