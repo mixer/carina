@@ -1,4 +1,5 @@
 import { ConstellationSocket, State } from './socket';
+import { CancelledError } from './errors';
 
 /**
  * Subscription is attached to a socket and tracks listening functions.
@@ -9,7 +10,11 @@ export class Subscription<T> {
     private socketStateListener: (state: State) => void;
     private socketDataListener: (ev: { channel: string, payload: T }) => void;
 
-    constructor(private socket: ConstellationSocket, private slug: string) {}
+    constructor(
+        private socket: ConstellationSocket,
+        private slug: string,
+        private onError: (err: Error) => void,
+    ) {}
 
     /**
      * add inserts the listener into the subscription
@@ -50,7 +55,13 @@ export class Subscription<T> {
     private addSocketListener() {
         this.socketStateListener = state => {
             if (state === State.Connected) {
-                this.socket.execute('livesubscribe', { events: [this.slug] });
+                this.socket
+                    .execute('livesubscribe', { events: [this.slug] })
+                    .catch(err => {
+                        if (!(err instanceof CancelledError)) {
+                            this.onError(err);
+                        }
+                    });
             }
         };
 
@@ -71,7 +82,9 @@ export class Subscription<T> {
         }
 
         if (this.socket.getState() === State.Connected) {
-            this.socket.execute('liveunsubscribe', { events: [this.slug] });
+            this.socket
+                .execute('liveunsubscribe', { events: [this.slug] })
+                .catch(() => undefined); // don't care about anything here
         }
 
         this.socket.removeListener('state', this.socketStateListener);

@@ -6,12 +6,14 @@ const State = Carina.SocketState;
 describe('subscription class', () => {
     let socket;
     let subscription;
+    let onError;
 
     beforeEach(() => {
         socket = new EventEmitter();
-        socket.execute = sinon.stub();
+        socket.execute = sinon.stub().resolves();
+        onError = sinon.stub();
         setState(State.Idle);
-        subscription = new Subscription(socket, 'user:1:update');
+        subscription = new Subscription(socket, 'user:1:update', onError);
     });
 
     const setState = state => {
@@ -45,6 +47,27 @@ describe('subscription class', () => {
 
         socket.emit('event:live', { channel: 'user:1:update', payload: 'foo' });
         expect(trigger).to.have.been.calledWith('foo');
+    });
+
+    it('ignores cancellation errors', done => {
+        socket.execute.rejects(new Carina.CancelledError());
+        subscription.add(sinon.stub());
+        setState(State.Connected);
+        setTimeout(() => { // timeout to allow promise to propagate
+            expect(onError).to.not.have.been.called;
+            done();
+        }, 1);
+    });
+
+    it('bubbles errors otherwise', done => {
+        const err = new Error('oh no!');
+        socket.execute.rejects(err);
+        subscription.add(sinon.stub());
+        setState(State.Connected);
+        setTimeout(() => { // timeout to allow promise to propagate
+            expect(onError).to.have.been.calledWith(err);
+            done();
+        }, 1);
     });
 
     describe('unsubscription', () => {

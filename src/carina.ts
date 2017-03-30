@@ -1,10 +1,13 @@
+import { EventEmitter } from 'events';
+
 import { ConstellationSocket, SocketOptions } from './socket';
 import { Subscription } from './subscription';
 
 export { Subscription } from './subscription';
 export { State as SocketState } from './socket';
+export * from './errors';
 
-export class Carina {
+export class Carina extends EventEmitter {
     /**
      * Set the websocket implementation.
      * You will likely not need to set this in a browser environment.
@@ -25,7 +28,9 @@ export class Carina {
     private subscriptions: { [key: string]: Subscription<any> } = Object.create(null);
 
     constructor(options: SocketOptions = {}) {
+        super();
         this.socket = new ConstellationSocket(options);
+        this.socket.on('error', (err: any) => this.emit('error', err));
     }
 
     /**
@@ -63,11 +68,13 @@ export class Carina {
      * @returns {Promise.<>} Resolves once subscribed. Any errors will reject.
      */
     public subscribe<T>(slug: string, cb: (data: T) => void): Promise<void> {
-        if (!this.subscriptions[slug]) {
-            this.subscriptions[slug] = new Subscription<T>(this.socket, slug);
+        let subscription = this.subscriptions[slug];
+        if (!subscription) {
+            subscription = this.subscriptions[slug]
+                = new Subscription<T>(this.socket, slug, err => this.emit('error', err));
         }
 
-        this.subscriptions[slug].add(cb);
+        subscription.add(cb);
         return Promise.resolve(); // backwards-compat
     }
 
