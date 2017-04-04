@@ -7,7 +7,7 @@ import { resolveOn } from './util';
 import * as pako from 'pako';
 
 // DO NOT EDIT, THIS IS UPDATE BY THE BUILD SCRIPT
-const packageVersion = '0.6.0'; // package version
+const packageVersion = '0.7.0'; // package version
 
 /**
  * The GzipDetector is used to determine whether packets should be compressed
@@ -103,6 +103,11 @@ function getDefaults(): SocketOptions {
 
 const jwtValidator = /^[\w_-]+?\.[\w_-]+?\.([\w_-]+)?$/i;
 
+/**
+ * The ConstellationSocket provides a somewhat low-level RPC framework for
+ * interacting with Constellation over a websocket. It also provides
+ * reconnection logic.
+ */
 export class ConstellationSocket extends EventEmitter {
     // WebSocket constructor, may be overridden if the environment
     // does not natively support it.
@@ -113,7 +118,6 @@ export class ConstellationSocket extends EventEmitter {
     private options: SocketOptions;
     private state: State;
     private socket: WebSocket;
-    private queue: Set<Packet> = new Set<Packet>();
 
     constructor(options: SocketOptions = {}) {
         super();
@@ -129,23 +133,22 @@ export class ConstellationSocket extends EventEmitter {
 
         this.on('event:hello', () => {
             this.options.reconnectionPolicy.reset();
-            this.state = State.Connected;
-            this.queue.forEach(data => this.send(data));
+            this.setState(State.Connected);
         });
 
         this.on('close', () => {
             if (this.state === State.Refreshing) {
-                this.state = State.Idle;
+                this.setState(State.Idle);
                 this.connect();
                 return;
             }
 
             if (this.state === State.Closing || !this.options.autoReconnect) {
-                this.state = State.Idle;
+                this.setState(State.Idle);
                 return;
             }
 
-            this.state = State.Reconnecting;
+            this.setState(State.Reconnecting);
             this.reconnectTimeout = setTimeout(() => {
                 this.connect();
             }, this.options.reconnectionPolicy.next());
@@ -156,8 +159,12 @@ export class ConstellationSocket extends EventEmitter {
      * Set the given options.
      * Defaults and previous option values will be used if not supplied.
      */
-    setOptions(options: SocketOptions) {
-        this.options = Object.assign({}, this.options || getDefaults(), options);
+    public setOptions(options: SocketOptions) {
+        this.options = {
+            ...getDefaults(),
+            ...this.options,
+            ...options,
+        };
 
         if (this.options.jwt && !jwtValidator.test(this.options.jwt)) {
             throw new Error('Invalid jwt');
@@ -174,7 +181,7 @@ export class ConstellationSocket extends EventEmitter {
      */
     public connect(): this {
         if (this.state === State.Closing) {
-            this.state = State.Refreshing;
+            this.setState(State.Refreshing);
             return this;
         }
 
@@ -196,7 +203,7 @@ export class ConstellationSocket extends EventEmitter {
         this.socket = new ConstellationSocket.WebSocket(url, protocol, extras);
         this.socket.binaryType = 'arraybuffer';
 
-        this.state = State.Connecting;
+        this.setState(State.Connecting);
 
         this.rebroadcastEvent('open');
         this.rebroadcastEvent('close');
@@ -228,15 +235,13 @@ export class ConstellationSocket extends EventEmitter {
     public close() {
         if (this.state === State.Reconnecting) {
             clearTimeout(<number>this.reconnectTimeout);
-            this.state = State.Idle;
+            this.setState(State.Idle);
             return;
         }
 
-        this.state = State.Closing;
+        this.setState(State.Closing);
         this.socket.close();
-
-        this.queue.forEach(packet => packet.cancel());
-        this.queue.clear();
+        clearTimeout(<number>this.pingTimeout);
     }
 
     /**
@@ -248,56 +253,23 @@ export class ConstellationSocket extends EventEmitter {
     }
 
     /**
-     * Send emits a packet over the websocket, or queues it for later sending
-     * if the socket is not open.
+     * Send emits a packet over the websocket.
      */
     public send(packet: Packet): Promise<any> {
-        if (packet.getState() === PacketState.Cancelled) {
-            return Promise.reject(new CancelledError());
-        }
-
-        this.queue.add(packet);
-
-        // If the socket has not said hello, queue the request and return
-        // the promise eventually emitted when it is sent.
-        if (this.state !== State.Connected) {
-            return Promise.race([
-                resolveOn(packet, 'send'),
-                resolveOn(packet, 'cancel')
-                .then(() => { throw new CancelledError() }),
-            ]);
-        }
-
         const timeout = packet.getTimeout(this.options.replyTimeout);
         const promise = Promise.race([
             // Wait for replies to that packet ID:
             resolveOn<{ err: Error, result: any }>(this, `reply:${packet.id()}`, timeout)
             .then(result => {
-                this.queue.delete(packet);
-
                 if (result.err) {
                     throw result.err;
                 }
 
                 return result.result;
-            })
-            .catch(err => {
-                this.queue.delete(packet);
-                throw err;
             }),
-            // Never resolve if the consumer cancels the packets:
-            resolveOn(packet, 'cancel', timeout + 1)
-            .then(() => { throw new CancelledError() }),
-            // Re-queue packets if the socket closes:
+            // Reject the packet if the socket closes before we get a reply:
             resolveOn(this, 'close', timeout + 1)
-            .then(() => {
-                if (!this.queue.has(packet)) { // skip if we already resolved
-                    return undefined;
-                }
-
-                packet.setState(PacketState.Pending);
-                return this.send(packet);
-            }),
+            .then(() => { throw new CancelledError() }),
         ]);
 
         packet.emit('send', promise);
@@ -305,6 +277,15 @@ export class ConstellationSocket extends EventEmitter {
         this.sendPacketInner(packet);
 
         return promise;
+    }
+
+    private setState(state: State) {
+        if (this.state === state) {
+            return;
+        }
+
+        this.state = state;
+        this.emit('state', state);
     }
 
     private sendPacketInner(packet: Packet) {

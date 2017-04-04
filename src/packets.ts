@@ -7,17 +7,15 @@ export enum PacketState {
     // waiting for a reply.
     Sending,
     // The packet was replied to, and has now been complete.
-    Replied,
-    // The caller has indicated they no longer wish to be notified about this event.
-    Cancelled
+    Replied
 }
-
-const maxInt32 = 0xFFFFFFFF;
 
 /**
  * A Packet is a data type that can be sent over the wire to Constellation.
  */
 export class Packet extends EventEmitter {
+    private static packetIncr = 0;
+
     private state: PacketState = PacketState.Pending;
     private timeout: number;
     private data: {
@@ -30,7 +28,7 @@ export class Packet extends EventEmitter {
     constructor(method: string, params: { [key: string]: any }) {
         super();
         this.data = {
-            id: Math.floor(Math.random() * maxInt32),
+            id: Packet.packetIncr++,
             type: 'method',
             method,
             params,
@@ -43,14 +41,6 @@ export class Packet extends EventEmitter {
      */
     id(): number {
         return this.data.id;
-    }
-
-    /**
-     * Aborts sending the message, if it has not been sent yet.
-     */
-    cancel() {
-        this.emit('cancel');
-        this.setState(PacketState.Cancelled);
     }
 
     /**
@@ -83,6 +73,10 @@ export class Packet extends EventEmitter {
         return this.state;
     }
 
+    /**
+     * Updates the state of the packet.
+     * @param {PacketState} state
+     */
     setState(state: PacketState) {
         if (state === this.state) {
             return;

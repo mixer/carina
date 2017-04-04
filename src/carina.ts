@@ -1,6 +1,13 @@
-import { ConstellationSocket, SocketOptions } from './socket';
+import { EventEmitter } from 'events';
 
-export class Carina {
+import { ConstellationSocket, SocketOptions } from './socket';
+import { Subscription } from './subscription';
+
+export { Subscription } from './subscription';
+export { State as SocketState } from './socket';
+export * from './errors';
+
+export class Carina extends EventEmitter {
     /**
      * Set the websocket implementation.
      * You will likely not need to set this in a browser environment.
@@ -18,22 +25,12 @@ export class Carina {
     }
 
     public socket: ConstellationSocket;
-
-    private waiting: { [key: string]: Promise<any> } = {};
-    private subscriptions: string[] = [];
+    private subscriptions: { [key: string]: Subscription<any> } = Object.create(null);
 
     constructor(options: SocketOptions = {}) {
+        super();
         this.socket = new ConstellationSocket(options);
-
-        // Resub to live events on reconnect.
-        this.socket.on('open', () => {
-            if (this.subscriptions.length > 0) {
-                this.socket.execute(
-                    'livesubscribe',
-                    { events: this.subscriptions }
-                );
-            }
-        });
+        this.socket.on('error', (err: any) => this.emit('error', err));
     }
 
     /**
@@ -71,23 +68,14 @@ export class Carina {
      * @returns {Promise.<>} Resolves once subscribed. Any errors will reject.
      */
     public subscribe<T>(slug: string, cb: (data: T) => void): Promise<void> {
-        this.socket.on('event:live', (data: { channel: string, payload: any }) => {
-            if (data.channel === slug) {
-                cb(data.payload);
-            }
-        });
+        let subscription = this.subscriptions[slug];
+        if (!subscription) {
+            subscription = this.subscriptions[slug]
+                = new Subscription<T>(this.socket, slug, err => this.emit('error', err));
+        }
 
-        return this
-        .waitFor(`subscription:${slug}`, () => {
-            return this.socket.execute('livesubscribe', { events: [slug] })
-            .then(() => {
-                this.subscriptions.push(slug);
-            });
-        })
-        .catch(err => {
-            this.stopWaiting(`subscription:${slug}`);
-            throw err;
-        });
+        subscription.add(cb);
+        return Promise.resolve(); // backwards-compat
     }
 
     /**
@@ -96,26 +84,22 @@ export class Carina {
      * @param {string} slug
      * @returns {Promise.<>} Resolves once unsubscribed. Any errors will reject.
      */
-    public unsubscribe(slug: string): Promise<void> {
-        this.stopWaiting(`subscription:${slug}`);
-        return this.socket.execute('liveunsubscribe', { events: [slug] })
-        .then(() => {
-            const index = this.subscriptions.indexOf(slug);
-            if (index > -1) {
-                this.subscriptions.splice(index, 1);
-            }
-        });
-    }
-
-    private waitFor<T>(identifier: string, cb?: () => Promise<T>): Promise<T> {
-        if (this.waiting[identifier]) {
-            return this.waiting[identifier];
+    public unsubscribe(slug: string, listener?: (data: any) => void): Promise<void> {
+        const subscription = this.subscriptions[slug];
+        if (!subscription) {
+            return Promise.resolve();
         }
 
-        return this.waiting[identifier] = cb();
-    }
+        if (listener) {
+            subscription.remove(listener);
+        } else {
+            subscription.removeAll();
+        }
 
-    private stopWaiting(identifier: string) {
-        delete this.waiting[identifier];
+        if (subscription.listenerCount() === 0) {
+            delete this.subscriptions[slug];
+        }
+
+        return Promise.resolve(); // backwards-compat
     }
 }

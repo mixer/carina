@@ -124,25 +124,16 @@ describe('socket', () => {
         }
 
         beforeEach(ready => {
-            awaitConnect(() => ready());
             socket = new Socket({ url, pingInterval: 100, replyTimeout: 50 }).connect();
 
             next = sinon.stub(socket.options.reconnectionPolicy, 'next').returns(5);
             reset = sinon.stub(socket.options.reconnectionPolicy, 'reset');
-        });
 
-        it('queues before "hello" is sent, sends method calls', () => {
-            let sent = false;
-            ws.on('message', payload => {
-                if (!sent) {
-                    assert.fail('Expected to wait until "hello" is sent before sending data');
-                }
-                assertAndReplyTo(payload);
-            });
-            setTimeout(() => { sent = true, greet() }, 10);
-
-            return socket.execute('hello', { foo: 'bar' })
-            .then(res => expect(res).to.equal('hi'));
+            Promise.all([
+                new Promise(resolve => socket.on('open', resolve)),
+                new Promise(resolve => awaitConnect(resolve)),
+            ])
+            .then(() => ready());
         });
 
         it('reconnects if a connection is lost using the backoff interval', done => {
@@ -194,19 +185,12 @@ describe('socket', () => {
             .catch(err => expect(err).to.be.an.instanceof(Carina.EventTimeoutError));
         });
 
-        it('retries messages if the socket is closed before replying', () => {
+        it('cancels messages if the socket is closed before replying', () => {
             ws.on('message', () => ws.close());
-            awaitConnect(newWs => {
-                greet();
-                newWs.on('message', payload => {
-                    assertAndReplyTo(payload);
-                    expect(socket.queue.size).to.equal(1);
-                });
-            });
-
             greet();
             return socket.execute('hello', { foo: 'bar' })
-            .then(res => expect(res).to.equal('hi'));
+            .then(() => { throw new Error('expected to have thrown'); })
+            .catch(err => expect(err).be.an.instanceof(Carina.CancelledError));
         });
 
         it('cancels packets if the socket is closed mid-call', () => {
@@ -214,6 +198,7 @@ describe('socket', () => {
             greet();
 
             return socket.execute('hello', { foo: 'bar' })
+            .then(() => { throw new Error('expected to have thrown'); })
             .catch(err => expect(err).be.an.instanceof(Carina.CancelledError));
         });
 
