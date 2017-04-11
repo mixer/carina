@@ -11,7 +11,7 @@ export function resolveOn<T>(emitter: EventEmitter, event: string,
     return new Promise((resolve, reject) => {
         let timer: number | NodeJS.Timer;
         const listener = (data: T) => {
-            clearTimeout(<number>timeout);
+            clearTimeout(<number>timer);
             resolve(data);
         };
 
