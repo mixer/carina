@@ -32,7 +32,7 @@ npm i --save carina
 
 #### app.js
 ```js
-var ca = new carina.Carina().open();
+var ca = new carina.Carina();
 ca.subscribe('channel:1:update', function (data) {
     console.log('Channel update', data);
 });
