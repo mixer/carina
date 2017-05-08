@@ -75,6 +75,19 @@ describe('socket', () => {
         socket.once('close', () => done());
     });
 
+    it('does not reconnect if a "fatal" error occurs', done => {
+        socket = new Socket({ url }).connect();
+        socket.on('error', err => {
+            expect(err).to.be.an.instanceof(Carina.ConstellationError.SessionExpired);
+            expect(socket.getState()).to.equal(Carina.State.Idle);
+            done();
+        });
+
+        server.on('connection', ws => {
+            ws.close(4005);
+        });
+    });
+
     it('decodes gzipped frames', done => {
         const actual = new Buffer([31, 139, 8, 0, 0, 9, 110, 136, 0, 255, 170,
             86, 42, 169, 44, 72, 85, 178, 82, 74, 45, 75, 205, 43, 81, 210,

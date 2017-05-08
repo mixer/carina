@@ -7,7 +7,7 @@ import { resolveOn } from './util';
 import * as pako from 'pako';
 
 // DO NOT EDIT, THIS IS UPDATE BY THE BUILD SCRIPT
-const packageVersion = '0.7.0'; // package version
+const packageVersion = '0.8.0'; // package version
 
 /**
  * The GzipDetector is used to determine whether packets should be compressed
@@ -136,23 +136,7 @@ export class ConstellationSocket extends EventEmitter {
             this.setState(State.Connected);
         });
 
-        this.on('close', () => {
-            if (this.state === State.Refreshing) {
-                this.setState(State.Idle);
-                this.connect();
-                return;
-            }
-
-            if (this.state === State.Closing || !this.options.autoReconnect) {
-                this.setState(State.Idle);
-                return;
-            }
-
-            this.setState(State.Reconnecting);
-            this.reconnectTimeout = setTimeout(() => {
-                this.connect();
-            }, this.options.reconnectionPolicy.next());
-        });
+        this.on('close', (err: CloseEvent) => this.handleSocketClose(err));
     }
 
     /**
@@ -239,9 +223,11 @@ export class ConstellationSocket extends EventEmitter {
             return;
         }
 
-        this.setState(State.Closing);
-        this.socket.close();
-        clearTimeout(<number>this.pingTimeout);
+        if (this.state !== State.Idle) {
+            this.setState(State.Closing);
+            this.socket.close();
+            clearTimeout(<number>this.pingTimeout);
+        }
     }
 
     /**
@@ -360,5 +346,31 @@ export class ConstellationSocket extends EventEmitter {
                 this.emit('warning', err)
             });
         }, this.options.pingInterval);
+    }
+
+    private handleSocketClose(cause: CloseEvent) {
+        if (this.state === State.Refreshing) {
+            this.setState(State.Idle);
+            this.connect();
+            return;
+        }
+
+        if (this.state === State.Closing || !this.options.autoReconnect) {
+            this.setState(State.Idle);
+            return;
+        }
+
+        const err = ConstellationError.from({ code: cause.code, message: cause.reason });
+        if (!err.shouldReconnect()) {
+            this.setState(State.Idle);
+            this.emit('error', err);
+            return;
+        }
+
+        this.setState(State.Reconnecting);
+        this.reconnectTimeout = setTimeout(
+            () => this.connect(),
+            this.options.reconnectionPolicy.next(),
+        );
     }
 }

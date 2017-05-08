@@ -38,7 +38,6 @@ export class MessageParseError extends CarinaError {
     }
 }
 
-
 export module ConstellationError {
     interface IConstellationErrorCtor {
         new (message: string): ConstellationError;
@@ -47,6 +46,10 @@ export module ConstellationError {
         constructor(public code: number, message: string) {
             super(message);
             ConstellationError.setProto(this);
+        }
+
+        shouldReconnect(): boolean {
+            return true;
         }
     }
 
@@ -104,6 +107,10 @@ export module ConstellationError {
         constructor(message: string) {
             super(4005, message);
             SessionExpired.setProto(this);
+        }
+
+        shouldReconnect(): boolean {
+            return false;
         }
     }
     errors[4005] = SessionExpired;
