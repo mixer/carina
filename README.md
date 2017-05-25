@@ -1,7 +1,7 @@
-# Carina [![Build Status](https://travis-ci.org/WatchBeam/carina.svg?branch=master)](https://travis-ci.org/WatchBeam/carina)
+# Carina [![Build Status](https://travis-ci.org/mixer/carina.svg?branch=master)](https://travis-ci.org/mixer/carina)
 
 ## Installation
-You can either use npm (recommended) or download the zip from the [releases page](https://github.com/WatchBeam/carina/releases).
+You can either use npm (recommended) or download the zip from the [releases page](https://github.com/mixer/carina/releases).
 
 ### Browser
 ```html

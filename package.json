@@ -1,7 +1,7 @@
 {
   "name": "carina",
   "version": "0.9.0",
-  "description": "A NodeJS and Browser compatible client for Beam.pro's constellation socket.",
+  "description": "A NodeJS and Browser compatible client for Mixer.com's constellation socket.",
   "main": "dist/commonjs",
   "typings": "dist/module/index.d.ts",
   "module": "dist/module",
@@ -16,18 +16,18 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/WatchBeam/carina.git"
+    "url": "git+https://github.com/mixer/carina.git"
   },
   "keywords": [
     "Constellation",
-    "Beam"
+    "Mixer"
   ],
   "author": "James Birtles <jameshb@beam.pro>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/WatchBeam/carina/issues"
+    "url": "https://github.com/mixer/carina/issues"
   },
-  "homepage": "https://github.com/WatchBeam/carina#readme",
+  "homepage": "https://github.com/mixer/carina#readme",
   "devDependencies": {
     "chai": "^3.5.0",
     "chai-subset": "^1.3.0",

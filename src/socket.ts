@@ -51,7 +51,7 @@ export interface SocketOptions {
     reconnectionPolicy?: ReconnectionPolicy;
     autoReconnect?: boolean;
 
-    // Websocket URL to connect to, defaults to wss://constellation.beam.pro
+    // Websocket URL to connect to, defaults to wss://constellation.mixer.com
     url?: string;
 
     // Interface used to determine whether messages should be gzipped.
@@ -90,7 +90,7 @@ export enum State {
 
 function getDefaults(): SocketOptions {
     return {
-        url: 'wss://constellation.beam.pro',
+        url: 'wss://constellation.mixer.com',
         userAgent: `Carina ${packageVersion}`,
         replyTimeout: 10000,
         isBot: false,
