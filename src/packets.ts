@@ -19,13 +19,13 @@ export class Packet extends EventEmitter {
     private state: PacketState = PacketState.Pending;
     private timeout: number;
     private data: {
-        type: 'method',
-        id: number,
-        method: string,
-        params: { [key: string]: any }
+        type: 'method';
+        id: number;
+        method: string;
+        params: { [key: string]: any } | null;
     };
 
-    constructor(method: string, params: { [key: string]: any }) {
+    constructor(method: string, params: { [key: string]: any } | null) {
         super();
         this.data = {
             id: Packet.packetIncr++,

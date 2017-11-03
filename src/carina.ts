@@ -27,7 +27,7 @@ export class Carina extends EventEmitter {
     public socket: ConstellationSocket;
     private subscriptions: { [key: string]: Subscription<any> } = Object.create(null);
 
-    constructor(options: SocketOptions = {}) {
+    constructor(options: Partial<SocketOptions> = {}) {
         super();
         this.socket = new ConstellationSocket(options);
         this.socket.on('error', (err: any) => this.emit('error', err));
@@ -36,7 +36,7 @@ export class Carina extends EventEmitter {
     /**
      * Sets the given options on the socket.
      */
-    public setOptions(options: SocketOptions) {
+    public setOptions(options: Partial<SocketOptions>) {
         this.socket.setOptions(options);
     }
 

@@ -7,7 +7,7 @@ import { resolveOn } from './util';
 import * as pako from 'pako';
 
 // DO NOT EDIT, THIS IS UPDATE BY THE BUILD SCRIPT
-const packageVersion = '0.9.0'; // package version
+const packageVersion = '0.9.1'; // package version
 
 /**
  * The GzipDetector is used to determine whether packets should be compressed
@@ -54,7 +54,7 @@ export interface Transform {
  * GzipTransform zips incoming and outgoing messages.
  */
 export class GzipTransform implements Transform {
-    constructor(private readonly detector?: GzipDetector) {}
+    constructor(private readonly detector: GzipDetector) {}
 
     public outgoing(data: string, raw: any): string | ArrayBuffer {
         if (this.detector.shouldZip(data, raw)) {
@@ -79,18 +79,18 @@ export class GzipTransform implements Transform {
 export interface SocketOptions {
     // Whether to announce that the client is a bot in the socket handshake.
     // Note that setting it to `false` may result in a ban. Defaults to true.
-    isBot?: boolean;
+    isBot: boolean;
 
     // User agent header to advertise in connections.
-    userAgent?: string;
+    userAgent: string;
 
     // Settings to use for reconnecting automatically to Constellation.
     // Defaults to automatically reconnecting with the ExponentialPolicy.
-    reconnectionPolicy?: ReconnectionPolicy;
-    autoReconnect?: boolean;
+    reconnectionPolicy: ReconnectionPolicy;
+    autoReconnect: boolean;
 
     // Websocket URL to connect to, defaults to wss://constellation.mixer.com
-    url?: string;
+    url: string;
 
     // Interface used to determine whether messages should be gzipped.
     // Defaults to a strategy which gzipps messages greater than 1KB in size.
@@ -98,7 +98,7 @@ export interface SocketOptions {
     gzip?: GzipDetector;
 
     // Optional transform for incoming/outgoing messages.
-    transform?: Transform;
+    transform: Transform;
 
     // Optional JSON web token to use for authentication.
     jwt?: string;
@@ -106,10 +106,10 @@ export interface SocketOptions {
     authToken?: string;
 
     // Timeout on Constellation method calls before we throw an error.
-    replyTimeout?: number;
+    replyTimeout: number;
 
     // Duration upon which to send a ping to the server. Defaults to 10 seconds.
-    pingInterval?: number;
+    pingInterval: number;
 }
 
 /**
@@ -130,7 +130,7 @@ export enum State {
     Refreshing,
 }
 
-function getDefaults(): SocketOptions {
+function getDefaults(): Partial<SocketOptions> {
     return {
         url: 'wss://constellation.mixer.com',
         userAgent: `Carina ${packageVersion}`,
@@ -160,7 +160,7 @@ export class ConstellationSocket extends EventEmitter {
     private state: State;
     private socket: WebSocket;
 
-    constructor(options: SocketOptions = {}) {
+    constructor(options: Partial<SocketOptions> = {}) {
         super();
         this.setOptions(options);
 
@@ -184,7 +184,7 @@ export class ConstellationSocket extends EventEmitter {
      * Set the given options.
      * Defaults and previous option values will be used if not supplied.
      */
-    public setOptions(options: SocketOptions) {
+    public setOptions(options: Partial<SocketOptions>) {
         this.options = {
             ...getDefaults(),
             transform: new GzipTransform(

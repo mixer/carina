@@ -1,12 +1,11 @@
 {
     "compilerOptions": {
         "moduleResolution": "node",
-        "noImplicitAny": true,
+        "strict": true,
         "noImplicitReturns": true,
-        "noFallthroughCasesInSwitch": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
-        "strictNullChecks": false,
+        "noFallthroughCasesInSwitch": true,
         "module": "es2015",
         "target": "es5",
         "sourceMap": true,
