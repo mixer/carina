@@ -11,7 +11,7 @@
     "build:ts:commonjs": "tsc --outDir dist/commonjs --module commonjs",
     "build:ts": "rm -rf dist && npm run build:inline-version && npm run build:ts:module && npm run build:ts:commonjs",
     "build": "npm run build:ts",
-    "test": "npm run build:ts:commonjs && mocha -r test/_setup.js",
+    "test": "npm run build:ts:commonjs && mocha --exit -r test/_setup.js",
     "prepublish": "npm run build"
   },
   "repository": {
@@ -22,7 +22,7 @@
     "Constellation",
     "Mixer"
   ],
-  "author": "James Birtles <jameshb@beam.pro>",
+  "author": "James Birtles <jameshb@mixer.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/mixer/carina/issues"
