@@ -36,6 +36,44 @@ export class SizeThresholdGzipDetector implements GzipDetector {
 }
 
 /**
+ * Transform is a middleware used to convert incoming and outgoing packets.
+ */
+export interface Transform {
+    /**
+     * Called when we send a data packet, transforms it if necessary.
+     */
+    outgoing(data: string, raw: any): string | ArrayBuffer;
+
+    /**
+     * Called when a data packet is received from Constellation.
+     */
+    incoming(data: string | ArrayBuffer): string;
+}
+
+/**
+ * GzipTransform zips incoming and outgoing messages.
+ */
+export class GzipTransform implements Transform {
+    constructor(private readonly detector?: GzipDetector) {}
+
+    public outgoing(data: string, raw: any): string | ArrayBuffer {
+        if (this.detector.shouldZip(data, raw)) {
+            return pako.gzip(data);
+        }
+
+        return data;
+    }
+
+    public incoming(data: string | ArrayBuffer): string {
+        if (typeof data !== 'string') {
+            return <any> pako.ungzip(<any> data, { to: 'string' });
+        }
+
+        return data;
+    }
+}
+
+/**
  * SocketOptions are passed to the
  */
 export interface SocketOptions {
@@ -56,7 +94,11 @@ export interface SocketOptions {
 
     // Interface used to determine whether messages should be gzipped.
     // Defaults to a strategy which gzipps messages greater than 1KB in size.
+    // DEPRECATED: use `transform` instead
     gzip?: GzipDetector;
+
+    // Optional transform for incoming/outgoing messages.
+    transform?: Transform;
 
     // Optional JSON web token to use for authentication.
     jwt?: string;
@@ -94,7 +136,6 @@ function getDefaults(): SocketOptions {
         userAgent: `Carina ${packageVersion}`,
         replyTimeout: 10000,
         isBot: false,
-        gzip: new SizeThresholdGzipDetector(1024),
         autoReconnect: true,
         reconnectionPolicy: new ExponentialReconnectionPolicy(),
         pingInterval: 10 * 1000,
@@ -146,6 +187,9 @@ export class ConstellationSocket extends EventEmitter {
     public setOptions(options: SocketOptions) {
         this.options = {
             ...getDefaults(),
+            transform: new GzipTransform(
+                options.gzip || new SizeThresholdGzipDetector(1024),
+            ),
             ...this.options,
             ...options,
         };
@@ -276,28 +320,17 @@ export class ConstellationSocket extends EventEmitter {
 
     private sendPacketInner(packet: Packet) {
         const data = JSON.stringify(packet);
-        const payload = this.options.gzip.shouldZip(data, packet.toJSON())
-            ? pako.gzip(data)
-            : data;
-
+        const payload = this.options.transform.outgoing(data, packet.toJSON());
         this.emit('send', payload);
         this.socket.send(payload);
     }
 
     private extractMessage(packet: string | Buffer) {
-        let messageString: string;
-        // If the packet is binary, then we need to unzip it
-        if (typeof packet !== 'string') {
-            messageString = <string> <any> pako.ungzip(packet, { to: 'string' });
-        } else {
-            messageString = packet;
-        }
-
         let message: any;
         try {
-            message = JSON.parse(messageString);
+            message = JSON.parse(this.options.transform.incoming(packet));
         } catch (err) {
-            throw new MessageParseError('Message returned was not valid JSON');
+            throw new MessageParseError(`Message returned was not valid JSON: ${err.stack}`);
         }
 
         // Bump the ping timeout whenever we get a message reply.
