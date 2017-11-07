@@ -7,8 +7,8 @@ import { CancelledError } from './errors';
 export class Subscription<T> {
 
     private listeners: ((data: T) => void)[] = [];
-    private socketStateListener: (state: State) => void;
-    private socketDataListener: (ev: { channel: string, payload: T }) => void;
+    private socketStateListener: ((state: State) => void) | null;
+    private socketDataListener: ((ev: { channel: string, payload: T }) => void) | null;
 
     constructor(
         private socket: ConstellationSocket,
@@ -88,7 +88,7 @@ export class Subscription<T> {
         }
 
         this.socket.removeListener('state', this.socketStateListener);
-        this.socket.removeListener('event:live', this.socketDataListener);
+        this.socket.removeListener('event:live', this.socketDataListener!);
         this.socketStateListener = null;
         this.socketDataListener = null;
     }

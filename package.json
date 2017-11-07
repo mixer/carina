@@ -11,7 +11,7 @@
     "build:ts:commonjs": "tsc --outDir dist/commonjs --module commonjs",
     "build:ts": "rm -rf dist && npm run build:inline-version && npm run build:ts:module && npm run build:ts:commonjs",
     "build": "npm run build:ts",
-    "test": "npm run build:ts:commonjs && mocha -r test/_setup.js",
+    "test": "npm run build:ts:commonjs && mocha --exit -r test/_setup.js",
     "prepublish": "npm run build"
   },
   "repository": {
@@ -22,25 +22,25 @@
     "Constellation",
     "Mixer"
   ],
-  "author": "James Birtles <jameshb@beam.pro>",
+  "author": "James Birtles <jameshb@mixer.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/mixer/carina/issues"
   },
   "homepage": "https://github.com/mixer/carina#readme",
   "devDependencies": {
-    "chai": "^3.5.0",
-    "chai-subset": "^1.3.0",
-    "mocha": "^3.0.2",
-    "sinon": "^2.1.0",
-    "sinon-chai": "^2.8.0",
-    "ts-node": "^2.1.0",
-    "typescript": "^2.1.6",
+    "@types/node": "^8.0.47",
+    "@types/pako": "^1.0.0",
+    "chai": "^4.1.2",
+    "chai-subset": "^1.6.0",
+    "mocha": "^4.0.1",
+    "sinon": "^4.1.0",
+    "sinon-chai": "^2.14.0",
+    "ts-node": "^3.3.0",
+    "typescript": "^2.6.1",
     "ws": "^1.1.1"
   },
   "dependencies": {
-    "@types/node": "^6.0.45",
-    "@types/pako": "^0.2.31",
-    "pako": "^1.0.3"
+    "pako": "^1.0.6"
   }
 }
