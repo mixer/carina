@@ -28,7 +28,7 @@ describe('socket', () => {
         it('connects with no auth', done => {
             socket = new Socket({ url }).connect();
             server.on('connection', ws => {
-                expect(ws.upgradeReq.url).to.equal('/');
+                expect(ws.upgradeReq.url).to.equal('/?');
                 expect(ws.upgradeReq.headers.authorization).to.be.undefined;
                 done();
             });
@@ -43,11 +43,19 @@ describe('socket', () => {
             });
         });
 
-        it('connects with an OAuth token', done => {
-            socket = new Socket({ url, authToken: 'asdf!' }).connect();
+        it('connects with JWT auth', done => {
+            socket = new Socket({ url, jwt: 'a.b.c' }).connect();
             server.on('connection', ws => {
-                expect(ws.upgradeReq.url).to.equal('/');
-                expect(ws.upgradeReq.headers.authorization).to.equal('Bearer asdf!');
+                expect(ws.upgradeReq.url).to.equal('/?jwt=a.b.c');
+                expect(ws.upgradeReq.headers.authorization).to.be.undefined;
+                done();
+            });
+        });
+
+        it('connects with query string params', done => {
+            socket = new Socket({ url, jwt: 'a.b.c' , queryString: { foo: 'bar' } }).connect();
+            server.on('connection', ws => {
+                expect(ws.upgradeReq.url).to.equal('/?foo=bar&jwt=a.b.c');
                 done();
             });
         });

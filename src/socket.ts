@@ -2,12 +2,13 @@ import { MessageParseError, ConstellationError, CancelledError } from './errors'
 import { ExponentialReconnectionPolicy, ReconnectionPolicy } from './reconnection';
 import { EventEmitter } from 'events';
 import { Packet, PacketState } from './packets';
+import { stringify } from 'querystring';
 
 import { resolveOn } from './util';
 import * as pako from 'pako';
 
 // DO NOT EDIT, THIS IS UPDATE BY THE BUILD SCRIPT
-const packageVersion = '0.9.1'; // package version
+const packageVersion = '0.10.0'; // package version
 
 /**
  * The GzipDetector is used to determine whether packets should be compressed
@@ -77,6 +78,9 @@ export class GzipTransform implements Transform {
  * SocketOptions are passed to the
  */
 export interface SocketOptions {
+    // Optional additional options to pass in the query string when connecting.
+    queryString?: object;
+
     // Whether to announce that the client is a bot in the socket handshake.
     // Note that setting it to `false` may result in a ban. Defaults to true.
     isBot: boolean;
@@ -221,12 +225,14 @@ export class ConstellationSocket extends EventEmitter {
             },
         };
 
-        let url = this.options.url;
+        let { url, queryString } = this.options;
         if (this.options.authToken) {
             extras.headers['Authorization'] = `Bearer ${this.options.authToken}`;
         } else if (this.options.jwt) {
-            url += `?jwt=${this.options.jwt}`; // invalid JWTs will cause errors
+            queryString = { ...queryString, jwt: this.options.jwt }
         }
+
+        url += `?${stringify(queryString)}`;
 
         this.socket = new ConstellationSocket.WebSocket(url, protocol, extras);
         this.socket.binaryType = 'arraybuffer';
