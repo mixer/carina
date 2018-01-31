@@ -134,7 +134,7 @@ export enum State {
     Refreshing,
 }
 
-function getDefaults(): Partial<SocketOptions> {
+function getDefaults() {
     return {
         url: 'wss://constellation.mixer.com',
         userAgent: `Carina ${packageVersion}`,
@@ -158,11 +158,11 @@ export class ConstellationSocket extends EventEmitter {
     // does not natively support it.
     public static WebSocket: any = typeof WebSocket === 'undefined' ? null : WebSocket;
 
-    private reconnectTimeout: NodeJS.Timer | number;
-    private pingTimeout: NodeJS.Timer | number;
-    private options: SocketOptions;
-    private state: State;
-    private socket: WebSocket;
+    private reconnectTimeout: NodeJS.Timer | number | undefined;
+    private pingTimeout: NodeJS.Timer | number | undefined;
+    private options: SocketOptions | undefined;
+    private state = State.Idle;
+    private socket: WebSocket | undefined;
 
     constructor(options: Partial<SocketOptions> = {}) {
         super();
@@ -177,7 +177,7 @@ export class ConstellationSocket extends EventEmitter {
         this.on('open', () => this.schedulePing());
 
         this.on('event:hello', () => {
-            this.options.reconnectionPolicy.reset();
+            this.options!.reconnectionPolicy.reset();
             this.setState(State.Connected);
         });
 
@@ -212,29 +212,31 @@ export class ConstellationSocket extends EventEmitter {
      * connect when creating a new instance.
      */
     public connect(): this {
+        const options = this.options!;
         if (this.state === State.Closing) {
             this.setState(State.Refreshing);
             return this;
         }
 
-        const protocol = this.options.gzip ? 'cnstl-gzip' : 'cnstl';
+        const protocol = options.gzip ? 'cnstl-gzip' : 'cnstl';
         const extras = {
             headers: <{ [name: string]: string | boolean }>{
-                'User-Agent': this.options.userAgent,
-                'X-Is-Bot': this.options.isBot,
+                'User-Agent': options.userAgent,
+                'X-Is-Bot': options.isBot,
             },
         };
 
-        let { url, queryString } = this.options;
-        if (this.options.authToken) {
-            extras.headers['Authorization'] = `Bearer ${this.options.authToken}`;
-        } else if (this.options.jwt) {
-            queryString = { ...queryString, jwt: this.options.jwt }
+        let { url, queryString } = options;
+        if (options.authToken) {
+            extras.headers['Authorization'] = `Bearer ${options.authToken}`;
+        } else if (options.jwt) {
+            queryString = { ...queryString, jwt: options.jwt }
         }
 
         url += `?${stringify(queryString)}`;
 
-        this.socket = new ConstellationSocket.WebSocket(url, protocol, extras);
+        const socket: WebSocket = new ConstellationSocket.WebSocket(url, protocol, extras);
+        this.socket = socket;
         this.socket.binaryType = 'arraybuffer';
 
         this.setState(State.Connecting);
@@ -275,7 +277,7 @@ export class ConstellationSocket extends EventEmitter {
 
         if (this.state !== State.Idle) {
             this.setState(State.Closing);
-            this.socket.close();
+            this.socket!.close();
             clearTimeout(<number>this.pingTimeout);
         }
     }
@@ -292,7 +294,7 @@ export class ConstellationSocket extends EventEmitter {
      * Send emits a packet over the websocket.
      */
     public send(packet: Packet): Promise<any> {
-        const timeout = packet.getTimeout(this.options.replyTimeout);
+        const timeout = packet.getTimeout(this.options!.replyTimeout);
         const promise = Promise.race([
             // Wait for replies to that packet ID:
             resolveOn<{ err: Error, result: any }>(this, `reply:${packet.id()}`, timeout)
@@ -326,15 +328,15 @@ export class ConstellationSocket extends EventEmitter {
 
     private sendPacketInner(packet: Packet) {
         const data = JSON.stringify(packet);
-        const payload = this.options.transform.outgoing(data, packet.toJSON());
+        const payload = this.options!.transform.outgoing(data, packet.toJSON());
         this.emit('send', payload);
-        this.socket.send(payload);
+        this.socket!.send(payload);
     }
 
     private extractMessage(packet: string | Buffer) {
         let message: any;
         try {
-            message = JSON.parse(this.options.transform.incoming(packet));
+            message = JSON.parse(this.options!.transform.incoming(packet));
         } catch (err) {
             throw new MessageParseError(`Message returned was not valid JSON: ${err.stack}`);
         }
@@ -356,7 +358,7 @@ export class ConstellationSocket extends EventEmitter {
     }
 
     private rebroadcastEvent(name: string) {
-        this.socket.addEventListener(name, evt => this.emit(name, evt));
+        this.socket!.addEventListener(name, evt => this.emit(name, evt));
     }
 
     private schedulePing() {
@@ -368,7 +370,7 @@ export class ConstellationSocket extends EventEmitter {
             }
 
             const packet = new Packet('ping', null);
-            const timeout = this.options.replyTimeout;
+            const timeout = this.options!.replyTimeout;
 
             setTimeout(() => {
                 this.sendPacketInner(packet);
@@ -381,20 +383,22 @@ export class ConstellationSocket extends EventEmitter {
             ])
             .then(() => this.emit('pong'))
             .catch(err => {
-                this.socket.close();
+                this.socket!.close();
                 this.emit('warning', err)
             });
-        }, this.options.pingInterval);
+        }, this.options!.pingInterval);
     }
 
     private handleSocketClose(cause: CloseEvent) {
+        const { autoReconnect, reconnectionPolicy } = this.options!;
+
         if (this.state === State.Refreshing) {
             this.setState(State.Idle);
             this.connect();
             return;
         }
 
-        if (this.state === State.Closing || !this.options.autoReconnect) {
+        if (this.state === State.Closing || !autoReconnect) {
             this.setState(State.Idle);
             return;
         }
@@ -409,7 +413,7 @@ export class ConstellationSocket extends EventEmitter {
         this.setState(State.Reconnecting);
         this.reconnectTimeout = setTimeout(
             () => this.connect(),
-            this.options.reconnectionPolicy.next(),
+            reconnectionPolicy.next(),
         );
     }
 }

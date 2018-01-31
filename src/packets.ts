@@ -17,7 +17,7 @@ export class Packet extends EventEmitter {
     private static packetIncr = 0;
 
     private state: PacketState = PacketState.Pending;
-    private timeout: number;
+    private timeout: number | undefined;
     private data: {
         type: 'method';
         id: number;
