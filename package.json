@@ -1,6 +1,6 @@
 {
   "name": "carina",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "A NodeJS and Browser compatible client for Mixer.com's constellation socket.",
   "main": "dist/commonjs",
   "typings": "dist/module/index.d.ts",
