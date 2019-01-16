@@ -8,7 +8,7 @@ import { resolveOn } from './util';
 import * as pako from 'pako';
 
 // DO NOT EDIT, THIS IS UPDATE BY THE BUILD SCRIPT
-const packageVersion = '0.10.0'; // package version
+const packageVersion = '0.11.0'; // package version
 
 /**
  * The GzipDetector is used to determine whether packets should be compressed
@@ -114,6 +114,9 @@ export interface SocketOptions {
 
     // Duration upon which to send a ping to the server. Defaults to 10 seconds.
     pingInterval: number;
+
+    //max listeners allowed for any single event.
+    maxEventListeners: number;
 }
 
 /**
@@ -143,6 +146,7 @@ function getDefaults() {
         autoReconnect: true,
         reconnectionPolicy: new ExponentialReconnectionPolicy(),
         pingInterval: 10 * 1000,
+        maxEventListeners: 30,
     };
 }
 
