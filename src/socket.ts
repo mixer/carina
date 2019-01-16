@@ -114,6 +114,9 @@ export interface SocketOptions {
 
     // Duration upon which to send a ping to the server. Defaults to 10 seconds.
     pingInterval: number;
+
+    //max listeners allowed for any single event.
+    maxEventListeners: number;
 }
 
 /**
@@ -143,6 +146,7 @@ function getDefaults() {
         autoReconnect: true,
         reconnectionPolicy: new ExponentialReconnectionPolicy(),
         pingInterval: 10 * 1000,
+        maxEventListeners: 30,
     };
 }
 
