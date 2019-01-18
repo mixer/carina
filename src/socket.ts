@@ -8,7 +8,7 @@ import { resolveOn } from './util';
 import * as pako from 'pako';
 
 // DO NOT EDIT, THIS IS UPDATE BY THE BUILD SCRIPT
-const packageVersion = '0.11.0'; // package version
+const packageVersion = '0.11.1'; // package version
 
 /**
  * The GzipDetector is used to determine whether packets should be compressed
