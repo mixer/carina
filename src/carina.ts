@@ -31,8 +31,7 @@ export class Carina extends EventEmitter {
 
     constructor(options: Partial<SocketOptions> = {}) {
         super();
-        options.maxEventListeners = options.maxEventListeners || DEFAULT_MAX_EVENT_LISTENERS;
-        this.setMaxListeners(options.maxEventListeners);
+        this.setMaxListeners(options.maxEventListeners || DEFAULT_MAX_EVENT_LISTENERS);
         this.socket = new ConstellationSocket(options);
         this.socket.on('error', (err: any) => this.emit('error', err));
     }
