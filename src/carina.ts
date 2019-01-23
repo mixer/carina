@@ -7,7 +7,7 @@ export { Subscription } from './subscription';
 export { State as SocketState } from './socket';
 export * from './errors';
 
-const DEFAULT_MAX_EVENT_LISTENERS = 30;
+export const DEFAULT_MAX_EVENT_LISTENERS = 30;
 
 export class Carina extends EventEmitter {
     /**

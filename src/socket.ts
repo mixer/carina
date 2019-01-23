@@ -6,6 +6,7 @@ import { stringify } from 'querystring';
 
 import { resolveOn } from './util';
 import * as pako from 'pako';
+import { DEFAULT_MAX_EVENT_LISTENERS } from './carina';
 
 // DO NOT EDIT, THIS IS UPDATE BY THE BUILD SCRIPT
 const packageVersion = '0.11.1'; // package version
@@ -209,6 +210,8 @@ export class ConstellationSocket extends EventEmitter {
         if (this.options.jwt && this.options.authToken) {
             throw new Error('Cannot connect to Constellation with both JWT and OAuth token.');
         }
+
+        this.setMaxListeners(options.maxEventListeners || DEFAULT_MAX_EVENT_LISTENERS);
     }
 
     /**
